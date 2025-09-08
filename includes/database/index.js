@@ -2,40 +2,46 @@ const Sequelize = require("sequelize");
 const { resolve } = require("path");
 const { DATABASE } = global.config;
 
-var dialect = Object.keys(DATABASE), storage;
-dialect = dialect[0]; 
-storage = resolve(__dirname, `../${DATABASE[dialect].storage}`);
+// Get database configuration
+const dialect = Object.keys(DATABASE)[0];
+const storage = resolve(__dirname, `../${DATABASE[dialect].storage}`);
 
-module.exports.sequelize = new Sequelize({
-  dialect,
-  storage,
-  pool: {
-    max: 20,
-    min: 0,
-    acquire: 60000,
-    idle: 20000
-  },
-  retry: {
-    match: [
-      /SQLITE_BUSY/,
-    ],
-    name: 'query',
-    max: 20
-  },
-  logging: false,
-  transactionType: 'IMMEDIATE',
-  define: {
-    underscored: false,
-    freezeTableName: true,
-    charset: 'utf8',
-    dialectOptions: {
-      collate: 'utf8_general_ci'
+// Create Sequelize instance with optimized settings
+const sequelize = new Sequelize({
+    dialect,
+    storage,
+    pool: {
+        max: 20,
+        min: 0,
+        acquire: 60000,
+        idle: 20000
     },
-    timestamps: true
-  },
-  sync: {
-    force: false
-  }
+    retry: {
+        match: [
+            /SQLITE_BUSY/,
+            /SQLITE_LOCKED/,
+            /database is locked/
+        ],
+        name: 'query',
+        max: 20
+    },
+    logging: false,
+    transactionType: 'IMMEDIATE',
+    define: {
+        underscored: false,
+        freezeTableName: true,
+        charset: 'utf8',
+        dialectOptions: {
+            collate: 'utf8_general_ci'
+        },
+        timestamps: true
+    },
+    sync: {
+        force: false
+    }
 });
 
-module.exports.Sequelize = Sequelize;
+module.exports = {
+    sequelize,
+    Sequelize
+};

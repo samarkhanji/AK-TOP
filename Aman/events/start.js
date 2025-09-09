@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports.config = {
-    name: "start",
+    name: "fyt",
     version: "1.0.0",
     credits: "AMAN KHAN",
     description: "Send messages from file line by line to a thread",

@@ -19,7 +19,7 @@ global.client = new Object({
     handleReply: new Array(),
     mainPath: process.cwd(),
     configPath: new String(),
-    timeStart: null, // Initialize timeStart properly
+    timeStart: null,
     getTime: function (option) {
         switch (option) {
             case "seconds":
@@ -74,7 +74,7 @@ global.moduleData = new Array();
 
 global.language = new Object();
 
-// Add missing checkBan function
+// Enhanced checkBan function
 async function checkBan(api) {
     try {
         global.checkBan = true;
@@ -105,7 +105,6 @@ catch {
 }
 
 try {
-    // Inject .env values into config
     function injectEnv(obj, parentKey = "") {
         for (const key in obj) {
             const fullKey = (parentKey ? parentKey + "_" : "") + key;
@@ -121,7 +120,6 @@ try {
     }
     injectEnv(configValue);
 
-    // Ensure arrays exist
     if (!Array.isArray(configValue.commandDisabled)) configValue.commandDisabled = [];
     if (!Array.isArray(configValue.eventDisabled)) configValue.eventDisabled = [];
 
@@ -130,7 +128,21 @@ try {
 }
 catch { return logger.loader("Can't load file config!", "error") }
 
-const { Sequelize, sequelize } = require("./includes/database/index.js");
+// Enhanced Database Connection with Better Error Handling
+let sequelize = null;
+let Sequelize = null;
+let databaseAvailable = false;
+
+try {
+    const dbModule = require("./includes/database/index.js");
+    Sequelize = dbModule.Sequelize;
+    sequelize = dbModule.sequelize;
+    databaseAvailable = true;
+    logger.loader("Database module loaded successfully");
+} catch (dbError) {
+    logger.loader(`Database module load error: ${dbError.message}`, "warn");
+    logger.loader("Continuing without database support", "warn");
+}
 
 writeFileSync(global.client.configPath + ".temp", JSON.stringify(global.config, null, 4), 'utf8');
 
@@ -175,7 +187,7 @@ catch {
     var appState = [];
 }
 
-//========= Login account and start Listen Event =========//
+//========= Enhanced Bot Function with Database Safety =========//
 
 function onBot({ models: botModel }) {
     const loginData = {};
@@ -183,14 +195,12 @@ function onBot({ models: botModel }) {
     login(loginData, async(loginError, loginApiData) => {
         if (loginError) return logger(JSON.stringify(loginError), `ERROR`);
         
-        // Set options if available
         if (global.config.FCAOption) {
             loginApiData.setOptions(global.config.FCAOption);
         }
         
         writeFileSync(appStateFile, JSON.stringify(loginApiData.getAppState(), null, '\x09'));
         
-        // IMPORTANT: Make API globally accessible
         global.client.api = loginApiData;
         global.api = loginApiData;
         
@@ -198,11 +208,10 @@ function onBot({ models: botModel }) {
         
         global.config.version = '1.2.14';
         
-        // FIXED: Set timeStart here for accurate uptime tracking
         global.client.timeStart = Date.now();
         console.log(`[SYSTEM] ✅ Bot start time set: ${new Date(global.client.timeStart).toISOString()}`);
         
-        // Load Commands
+        // Enhanced Commands Loading with Database Safety
         try {
             const commandsPath = join(global.client.mainPath, 'Aman', 'commands');
             if (existsSync(commandsPath)) {
@@ -214,7 +223,9 @@ function onBot({ models: botModel }) {
                 
                 for (const command of listCommand) {
                     try {
+                        delete require.cache[require.resolve(join(commandsPath, command))];
                         var module = require(join(commandsPath, command));
+                        
                         if (!module.config || !module.run) {
                             logger.loader(`❌ Invalid format: ${command}`, 'warn');
                             continue;
@@ -260,13 +271,18 @@ function onBot({ models: botModel }) {
                             }
                         }
                         
-                        // Handle onLoad
+                        // Enhanced onLoad with Database Safety
                         if (module.onLoad) {
                             try {
-                                const moduleData = { api: loginApiData, models: botModel };
+                                const moduleData = { 
+                                    api: loginApiData, 
+                                    models: botModel,
+                                    databaseAvailable: !!botModel
+                                };
                                 module.onLoad(moduleData);
                             } catch (error) {
-                                logger.loader(`⚠️ OnLoad error for ${module.config.name}: ${error}`, 'warn');
+                                logger.loader(`⚠️ OnLoad error for ${module.config.name}: ${error.message}`, 'warn');
+                                // Continue loading other commands even if one fails
                             }
                         }
                         
@@ -275,15 +291,16 @@ function onBot({ models: botModel }) {
                         logger.loader(`✅ Loaded command: ${module.config.name}`);
                         
                     } catch (error) {
-                        logger.loader(`❌ Failed to load ${command}: ${error}`, 'error');
+                        logger.loader(`❌ Failed to load ${command}: ${error.message}`, 'error');
+                        // Continue with other commands
                     }
                 }
             }
         } catch (error) {
-            logger.loader(`❌ Commands folder error: ${error}`, 'error');
+            logger.loader(`❌ Commands folder error: ${error.message}`, 'error');
         }
         
-        // Load Events
+        // Enhanced Events Loading
         try {
             const eventsPath = join(global.client.mainPath, 'Aman', 'events');
             if (existsSync(eventsPath)) {
@@ -294,7 +311,9 @@ function onBot({ models: botModel }) {
                 
                 for (const ev of events) {
                     try {
+                        delete require.cache[require.resolve(join(eventsPath, ev))];
                         var event = require(join(eventsPath, ev));
+                        
                         if (!event.config || !event.run) {
                             logger.loader(`❌ Invalid event format: ${ev}`, 'warn');
                             continue;
@@ -336,37 +355,44 @@ function onBot({ models: botModel }) {
                                     }
                                 }
                             } catch (error) {
-                                logger.loader(`⚠️ Config error for ${event.config.name}: ${error}`, 'warn');
+                                logger.loader(`⚠️ Config error for ${event.config.name}: ${error.message}`, 'warn');
                             }
                         }
                         
-                        // Handle onLoad
+                        // Enhanced onLoad for events
                         if (event.onLoad) {
                             try {
-                                const eventData = { api: loginApiData, models: botModel };
+                                const eventData = { 
+                                    api: loginApiData, 
+                                    models: botModel,
+                                    databaseAvailable: !!botModel
+                                };
                                 event.onLoad(eventData);
                             } catch (error) {
-                                logger.loader(`⚠️ OnLoad error for ${event.config.name}: ${error}`, 'warn');
+                                logger.loader(`⚠️ OnLoad error for ${event.config.name}: ${error.message}`, 'warn');
                             }
                         }
                         
-                        // FIXED: Register handleEvent for NoPrefix events
                         if (event.handleEvent) global.client.eventRegistered.push(event.config.name);
                         global.client.events.set(event.config.name, event);
                         logger.loader(`✅ Loaded event: ${event.config.name}`);
                         
                     } catch (error) {
-                        logger.loader(`❌ Failed to load event ${ev}: ${error}`, 'error');
+                        logger.loader(`❌ Failed to load event ${ev}: ${error.message}`, 'error');
                     }
                 }
             }
         } catch (error) {
-            logger.loader(`❌ Events folder error: ${error}`, 'error');
+            logger.loader(`❌ Events folder error: ${error.message}`, 'error');
         }
         
         logger.loader(`🎉 Loaded ${global.client.commands.size} commands and ${global.client.events.size} events`);
         logger.loader(`⚡ Startup Time: ${((Date.now() - global.client.timeStart) / 1000).toFixed()}s`);
         logger.loader('===== [ AMAN BOT STARTED ] =====');
+        
+        if (!botModel) {
+            logger.loader('⚠️ Running without database - some features may be limited', 'warn');
+        }
         
         // Save config
         try {
@@ -375,31 +401,40 @@ function onBot({ models: botModel }) {
                 unlinkSync(global.client.configPath + '.temp');
             }
         } catch (error) {
-            logger.loader(`⚠️ Config save error: ${error}`, 'warn');
+            logger.loader(`⚠️ Config save error: ${error.message}`, 'warn');
         }
         
-        // Setup listener
+        // Enhanced Listener Setup with Error Handling
         try {
-            const listenerData = { api: loginApiData, models: botModel };
+            const listenerData = { 
+                api: loginApiData, 
+                models: botModel,
+                databaseAvailable: !!botModel
+            };
             const listener = require('./includes/listen.js')(listenerData);
 
             function listenerCallback(error, message) {
                 if (error) return logger(`Listen error: ${JSON.stringify(error)}`, 'error');
                 if (['presence', 'typ', 'read_receipt'].some(data => data == message.type)) return;
                 if (global.config.DeveloperMode) console.log(message);
-                return listener(message);
+                
+                try {
+                    return listener(message);
+                } catch (listenerError) {
+                    console.log(`[LISTENER] Error processing message: ${listenerError.message}`);
+                }
             }
             
             global.handleListen = loginApiData.listenMqtt(listenerCallback);
         } catch (error) {
-            logger.loader(`❌ Listener setup error: ${error}`, 'error');
+            logger.loader(`❌ Listener setup error: ${error.message}`, 'error');
         }
         
         // Check ban
         try {
             await checkBan(loginApiData);
         } catch (error) {
-            logger.loader(`⚠️ Ban check error: ${error}`, 'warn');
+            logger.loader(`⚠️ Ban check error: ${error.message}`, 'warn');
         }
         
         if (!global.checkBan) {
@@ -410,28 +445,104 @@ function onBot({ models: botModel }) {
     });
 }
 
-//========= Connecting to Database =========//
+//========= Enhanced Database Connection with Comprehensive Error Handling =========//
 
 (async () => {
-    try {
-        await sequelize.authenticate();
-        const authentication = { Sequelize, sequelize };
-        const models = require('./includes/database/model.js')(authentication);
-        logger('✅ Database connected successfully', '[ DATABASE ]');
-        const botData = { models };
-        onBot(botData);
-    } catch (error) { 
-        logger(`❌ Database connection failed: ${JSON.stringify(error)}`, '[ DATABASE ]');
-        // Continue without database
+    if (!databaseAvailable) {
+        logger('⚠️ Database module not available - starting without database', '[ DATABASE ]');
         const botData = { models: null };
-        onBot(botData);
+        return onBot(botData);
+    }
+
+    // Enhanced database connection with multiple retry attempts
+    let connectionAttempts = 0;
+    const maxAttempts = 3;
+    
+    while (connectionAttempts < maxAttempts) {
+        try {
+            connectionAttempts++;
+            logger(`🔄 Database connection attempt ${connectionAttempts}/${maxAttempts}`, '[ DATABASE ]');
+            
+            await sequelize.authenticate();
+            
+            // Try to initialize models with enhanced error handling
+            try {
+                const authentication = { Sequelize, sequelize };
+                const models = require('./includes/database/model.js')(authentication);
+                logger('✅ Database connected and models loaded successfully', '[ DATABASE ]');
+                
+                const botData = { models };
+                return onBot(botData);
+                
+            } catch (modelError) {
+                logger(`⚠️ Model initialization error: ${modelError.message}`, '[ DATABASE ]');
+                
+                // Check if it's a validation error
+                if (modelError.message && modelError.message.includes('ValidationError')) {
+                    logger('🔧 Attempting database schema fix...', '[ DATABASE ]');
+                    
+                    try {
+                        // Try to sync with force to recreate tables
+                        await sequelize.sync({ force: true });
+                        logger('✅ Database schema rebuilt successfully', '[ DATABASE ]');
+                        
+                        const authentication = { Sequelize, sequelize };
+                        const models = require('./includes/database/model.js')(authentication);
+                        const botData = { models };
+                        return onBot(botData);
+                        
+                    } catch (syncError) {
+                        logger(`❌ Database sync failed: ${syncError.message}`, '[ DATABASE ]');
+                    }
+                }
+                
+                // If model loading fails, continue without database
+                if (connectionAttempts >= maxAttempts) {
+                    logger('⚠️ Starting bot without database functionality', '[ DATABASE ]');
+                    const botData = { models: null };
+                    return onBot(botData);
+                }
+            }
+            
+        } catch (connectionError) {
+            logger(`❌ Database connection attempt ${connectionAttempts} failed: ${connectionError.message}`, '[ DATABASE ]');
+            
+            if (connectionAttempts >= maxAttempts) {
+                logger('❌ All database connection attempts failed - starting without database', '[ DATABASE ]');
+                const botData = { models: null };
+                return onBot(botData);
+            }
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
     }
 })();
 
+// Enhanced Error Handling
 process.on('unhandledRejection', (err, p) => {
-    console.log('🚫 Unhandled Rejection:', err);
+    console.log('🚫 Unhandled Rejection:', err?.message || err);
+    if (err?.stack) console.log('Stack:', err.stack);
 });
 
 process.on('uncaughtException', (err) => {
-    console.log('🚫 Uncaught Exception:', err);
+    console.log('🚫 Uncaught Exception:', err?.message || err);
+    if (err?.stack) console.log('Stack:', err.stack);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('\n🛑 Received SIGINT. Graceful shutdown...');
+    if (global.handleListen) {
+        global.handleListen();
+    }
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('\n🛑 Received SIGTERM. Graceful shutdown...');
+    if (global.handleListen) {
+        global.handleListen();
+    }
+    process.exit(0);
 });

@@ -136,7 +136,7 @@ module.exports = {
     const keyWord = args.join(" ");
     if (!keyWord) {
       await api.unsendMessage(processingMsg.messageID);
-      return api.sendMessage('❌ Please provide a search keyword or YouTube link.', threadID, messageID);
+      return api.sendMessage('❌ kuch Search to kro koi song name ya video name.', threadID, messageID);
     }
 
     try {
@@ -171,7 +171,7 @@ module.exports = {
       await api.unsendMessage(processingMsg.messageID);
 
       api.sendMessage({
-        body: msg + "👉 Reply with a number (1-6) to select a video.\n💡 Credits: Aman Khan",
+        body: msg + "👉 Reply with a number (1-6) to select a video.\n💡 *★᭄𝐎𝐰𝐧𝐞𝐫 𝐀 𝐊 ⚔️⏤͟͟͞͞★*",
         attachment: await Promise.all(thumbnails)
       }, threadID, (err, info) => {
         if (err) {

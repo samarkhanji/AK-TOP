@@ -136,7 +136,7 @@ module.exports = {
     const keyWord = args.join(" ");
     if (!keyWord) {
       await api.unsendMessage(processingMsg.messageID);
-      return api.sendMessage('❌ kuch Search to kro koi song name ya video name.', threadID, messageID);
+      return api.sendMessage('❌ Please provide a search keyword or YouTube link.', threadID, messageID);
     }
 
     try {

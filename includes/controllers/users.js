@@ -2,6 +2,33 @@ module.exports = function ({ models, api }) {
     const Users = models.use('Users');
 
     /**
+     * Sanitize user name to prevent validation errors
+     * @param {string} name - Raw name
+     * @returns {string} Sanitized name
+     */
+    function sanitizeName(name) {
+        if (!name || typeof name !== 'string') return "Facebook User";
+        
+        // Remove special characters that might cause issues
+        let cleanName = name.replace(/[^\w\s\u00C0-\u017F\u1EA0-\u1EF9]/g, '');
+        
+        // Trim whitespace
+        cleanName = cleanName.trim();
+        
+        // Ensure it's not empty after cleaning
+        if (!cleanName || cleanName.length === 0) {
+            cleanName = "Facebook User";
+        }
+        
+        // Limit to 200 characters (safe margin below 255)
+        if (cleanName.length > 200) {
+            cleanName = cleanName.substring(0, 200).trim();
+        }
+        
+        return cleanName;
+    }
+
+    /**
      * Get user info from Facebook API
      * @param {string|number} id - User ID
      */
@@ -34,8 +61,9 @@ module.exports = function ({ models, api }) {
             if (global.data.allUserID.includes(id)) {
                 const userData = await getData(id);
                 if (userData && userData.name) {
-                    global.data.userName.set(id, userData.name);
-                    return userData.name;
+                    const safeName = sanitizeName(userData.name);
+                    global.data.userName.set(id, safeName);
+                    return safeName;
                 }
             }
             
@@ -43,8 +71,9 @@ module.exports = function ({ models, api }) {
             try {
                 const userInfo = await getInfo(id);
                 if (userInfo && userInfo.name) {
-                    global.data.userName.set(id, userInfo.name);
-                    return userInfo.name;
+                    const safeName = sanitizeName(userInfo.name);
+                    global.data.userName.set(id, safeName);
+                    return safeName;
                 }
             } catch (apiError) {
                 console.log('API error for getNameUser:', apiError.message);
@@ -98,7 +127,7 @@ module.exports = function ({ models, api }) {
     }
 
     /**
-     * Update user data
+     * Update user data with sanitization
      * @param {string|number} userID - User ID
      * @param {Object} options - Update options
      */
@@ -109,6 +138,11 @@ module.exports = function ({ models, api }) {
         }
         
         try {
+            // Sanitize name if provided
+            if (options.name) {
+                options.name = sanitizeName(options.name);
+            }
+            
             const user = await Users.findOne({ where: { userID } });
             if (user) {
                 await user.update(options);
@@ -159,7 +193,7 @@ module.exports = function ({ models, api }) {
     }
 
     /**
-     * Create new user record
+     * Create new user record with enhanced validation
      * @param {string|number} userID - User ID
      * @param {Object} defaults - Default values
      */
@@ -175,18 +209,29 @@ module.exports = function ({ models, api }) {
                 try {
                     const userInfo = await getInfo(userID);
                     if (userInfo && userInfo.name) {
-                        defaults.name = userInfo.name;
+                        defaults.name = sanitizeName(userInfo.name);
                     }
                 } catch (apiError) {
                     console.log('Could not fetch user info from API:', apiError.message);
+                    defaults.name = "Facebook User";
                 }
+            } else {
+                // Sanitize provided name
+                defaults.name = sanitizeName(defaults.name);
             }
+            
+            // Ensure we have a valid name
+            if (!defaults.name || defaults.name.length === 0) {
+                defaults.name = "Facebook User";
+            }
+            
+            console.log(`[Users] Creating user ${userID} with name: "${defaults.name}" (length: ${defaults.name.length})`);
             
             const [user, created] = await Users.findOrCreate({ 
                 where: { userID }, 
                 defaults: {
-                    name: null,
-                    data: {},
+                    name: defaults.name,
+                    data: defaults.data || {},
                     ...defaults
                 }
             });
@@ -199,15 +244,41 @@ module.exports = function ({ models, api }) {
                 global.data.allUserID.push(userID);
             }
             
+            if (created) {
+                console.log(`[Users] Successfully created user: ${userID}`);
+            }
+            
             return { user: user.get({ plain: true }), created };
         } catch (error) {
-            console.error('createData user error:', error);
+            console.error(`[Users] createData error for ${userID}:`, error);
+            
+            // If it's a validation error, try with a simple fallback name
+            if (error.message && error.message.includes('ValidationError')) {
+                console.log(`[Users] Validation error, retrying with fallback name for ${userID}`);
+                try {
+                    const [user, created] = await Users.findOrCreate({ 
+                        where: { userID }, 
+                        defaults: {
+                            name: `User_${String(userID).slice(-6)}`, // Simple fallback
+                            data: defaults.data || {}
+                        }
+                    });
+                    
+                    console.log(`[Users] Successfully created user with fallback name: ${userID}`);
+                    return { user: user.get({ plain: true }), created };
+                    
+                } catch (fallbackError) {
+                    console.error(`[Users] Fallback creation also failed for ${userID}:`, fallbackError);
+                    throw new Error(`Failed to create user data even with fallback: ${fallbackError.message}`);
+                }
+            }
+            
             throw new Error(`Failed to create user data: ${error.message}`);
         }
     }
 
     /**
-     * Update user name and cache
+     * Update user name and cache with sanitization
      * @param {string|number} userID - User ID
      * @param {string} name - New name
      */
@@ -216,8 +287,9 @@ module.exports = function ({ models, api }) {
         if (!name || typeof name !== 'string') throw new Error("Name must be a non-empty string");
         
         try {
-            await setData(userID, { name });
-            global.data.userName.set(userID, name);
+            const safeName = sanitizeName(name);
+            await setData(userID, { name: safeName });
+            global.data.userName.set(userID, safeName);
             return true;
         } catch (error) {
             console.error('updateName error:', error);
@@ -282,7 +354,7 @@ module.exports = function ({ models, api }) {
     }
 
     /**
-     * Refresh user info from Facebook API
+     * Refresh user info from Facebook API with sanitization
      * @param {string|number} userID - User ID
      */
     async function refreshUserInfo(userID) {
@@ -291,8 +363,9 @@ module.exports = function ({ models, api }) {
         try {
             const userInfo = await getInfo(userID);
             if (userInfo && userInfo.name) {
-                await setData(userID, { name: userInfo.name });
-                global.data.userName.set(userID, userInfo.name);
+                const safeName = sanitizeName(userInfo.name);
+                await setData(userID, { name: safeName });
+                global.data.userName.set(userID, safeName);
             }
             return userInfo;
         } catch (error) {

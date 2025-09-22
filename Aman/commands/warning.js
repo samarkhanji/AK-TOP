@@ -46,27 +46,30 @@ module.exports.handleEvent = async function({ api, event, Users }) {
             "HATT TERRI BEHAN KI CHUT FAD KE KUTTO KHILAO RAND KE",
             "APNI AMMA SE PUCHH KISSE CHUDI HAI AAJ JHANT KE BAAL",
             "TERIII BEHANNN KO CHOD KE PAGAL KRDUGA RANDI",
-            "ARE JHANT KE BAAL TU ITNA BADA HO GAYA APNE BAAP KO ABOUSE KREGA"
-            "JAHA SE NIKLA HAI USI ME DAL DUGA JHANTU ",
+            "ARE JHANT KE BAAL TU ITNA BADA HO GAYA APNE BAAP KO ABOUSE KREGA",
+            "JAHA SE NIKLA HAI USI ME DAL DUGA JHANTU",
             "GAND ME AGR JIYADA KHUJLI HAI TO ID ME AA JANA",
             "CHAL DFA HO RANDI KE",
         ];
 
-        // Sab warnings line by line bhejna
+        // Sab warnings line by line bhejna with mention
         for (let msg of warnings) {
             await new Promise(resolve => {
                 api.sendMessage({
-                    body: msg,
-                    mentions: [{ tag: userName, id: senderID, fromIndex: msg.indexOf(userName) }]
+                    body: `@${userName} ${msg}`,
+                    mentions: [{ tag: `@${userName}`, id: senderID, fromIndex: 0 }]
                 }, threadID, () => resolve());
             });
             await new Promise(r => setTimeout(r, 1200)); // 1.2s delay
         }
 
-        // Final message
+        // Final message with mention
         setTimeout(async () => {
             await new Promise(resolve => {
-                api.sendMessage("LERE LUND KE YE APNA GROUP APNI GAND ME DAL LENA AB BOT EXIT 😎😈", threadID, () => resolve());
+                api.sendMessage({
+                    body: `@${userName} LERE LUND KE YE APNA GROUP APNI GAND ME DAL LENA AB BOT EXIT 😎😈`,
+                    mentions: [{ tag: `@${userName}`, id: senderID, fromIndex: 0 }]
+                }, threadID, () => resolve());
             });
 
             // Bot leave group

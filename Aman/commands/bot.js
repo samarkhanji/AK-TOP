@@ -116,7 +116,7 @@ module.exports.handleEvent = async function ({ api, event }) {
 
   try {
     // Set reaction
-    api.setMessageReaction("💝", messageID, () => {}, true);
+    api.setMessageReaction("⋆.°🦋༘⋆", messageID, () => {}, true);
 
     const userInfo = await api.getUserInfo(senderID);
     const userName = userInfo[senderID]?.name || "User";
@@ -133,7 +133,8 @@ Rules:
 - Use ${selectedCharacter.style} tone
 - No AI explanations or formal talk
 - Direct, smart, and engaging reply
-- Match user's language (Hindi/English)
+- Always reply in English alphabet (Roman/Hinglish) - NO Devanagari script
+- If thinking in Hindi, write it as: "Tum bahut cute ho" not "तुम बहुत क्यूट हो"
 - Be authentic to ${selectedCharacter.name}'s personality
 - No long explanations, just pure character response`;
 
@@ -185,9 +186,9 @@ Rules:
 •••••••••••••••••••••••••••••••••
 ${reply}
 ───⋆⋅☆⋅⋆────⋆⋅☆⋅⋆──
-${randomEmoji}@${selectedCharacter.name}
+${randomEmoji}${selectedCharacter.name}
 
-✮⃝❤@Aman Khan ᯓ ✈︎`;
+✮⃝❤𝙊𝙬𝙣𝙚𝙧 𝘼𝙆ᯓ ✈︎`;
 
     return api.sendMessage(finalMsg, threadID, messageID);
     
@@ -208,7 +209,7 @@ ${randomEmoji}@${selectedCharacter.name}
 •••••••••••••••••••••••••••••••••
 ${randomError}
 ───⋆⋅☆⋅⋆────⋆⋅☆⋅⋆──
-🔥@${selectedCharacter ? selectedCharacter.name : 'System'}
+🔥${selectedCharacter ? selectedCharacter.name : 'System'}
 
 *★᭄𝐎𝐰𝐧𝐞𝐫 𝐀 𝐊 ⚔️⏤͟͟͞͞★*`;
     

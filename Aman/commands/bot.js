@@ -221,7 +221,7 @@ module.exports.run = async function ({ api, event, args }) {
   if (args.length === 0) {
     const charList = Object.values(characters).map(char => `${char.emoji} ${char.name}`).join('\n');
     
-    return api.sendMessage(`🤖 Character Bot System:\n\n📝 Available Characters:\n${charList}\n\n💡 Usage:\n• Type "bot" for random character\n• Type character name for specific one\n• Reply to character messages\n\n✮⃝❤ Aman Khan ᯓ ✈︎`, event.threadID, event.messageID);
+    return api.sendMessage(`🤖 Character Bot System:\n\n📝 Available Characters:\n${charList}\n\n💡 Usage:\n• Type "bot" for random character\n• Type character name for specific one\n• Reply to character messages\n\n✮⃝❤𝙊𝙬𝙣𝙚𝙧 𝘼𝙆ᯓ ✈︎`, event.threadID, event.messageID);
   }
   return;
 };

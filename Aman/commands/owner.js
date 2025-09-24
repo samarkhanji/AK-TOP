@@ -26,8 +26,8 @@ const KEYWORDS = [
 
 const IMAGE_URL = "https://i.supaimg.com/71fbc4ec-7a4d-4df0-aa21-2e98194ca31a.jpg";
 const OWNER_TEXT = `😎⚔️𝐌𝐲 𝐎𝐰𝐧𝐞𝐫 𝐀𝐊𝟒𝟕⚔️😎\n 
-ID LINK 
-https://www.facebook.com/Ak47xK`;
+🌐 ID LINK 
+https://www.facebook.com/AK47xk/`;
 
 module.exports.handleEvent = async function({ api, event, Users }) {
   try {

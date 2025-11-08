@@ -14,8 +14,8 @@
   "OTPKEY": "",
   "BOTNAME": "Sony",
   "PREFIX": "/",
-  "ADMINBOT": ["100088677459075"],
-  "NDH": ["100088677459075"],
+  "ADMINBOT": ["100000933269135"],
+  "NDH": ["100000933269135"],
   "DATABASE": {
     "sqlite": {
       "storage": "data.sqlite"

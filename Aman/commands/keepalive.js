@@ -12,7 +12,7 @@ module.exports.config = {
 };
 
 let keepAliveInterval = null;
-const RENDER_URL = "https://ak-top-1w.onrender.com"; // Render link (hidden in output)
+const RENDER_URL = "https://ak-top-gq0n.onrender.com"; // Render link (hidden in output)
 
 async function pingServer() {
     try {

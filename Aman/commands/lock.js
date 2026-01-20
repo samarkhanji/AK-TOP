@@ -382,7 +382,7 @@ module.exports.handleEvent = async function({ api, event }) {
                         threadID
                     );
                 }
-            }, 4000);
+            }, 1500);
         }
         
         // Enhanced member name change detection
@@ -442,7 +442,7 @@ module.exports.handleEvent = async function({ api, event }) {
                 } catch (error) {
                     console.log("[GroupLock] Member check error:", error);
                 }
-            }, 3000);
+            }, 5000);
         }
         
         // Enhanced DP change detection
